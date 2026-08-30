@@ -2,7 +2,7 @@
 
 A local review tool for rendering Blockbench/Minecraft Bedrock entity models before loading them into Minecraft. It is designed for a repeatable **edit in Blockbench → render fixed views → compare to the reference → revise** loop.
 
-![Seven-view contact sheet generated from the included sample geometry](docs/images/sample-contact-sheet.png)
+![Seven-view contact sheet of the included Copper Beetle demo](docs/images/sample-contact-sheet.png)
 
 **Status:** usable v1.0 local tool. The parser, transforms, UV behavior, server boundary, and command-line capture path are tested. Minecraft runtime behavior remains deliberately out of scope.
 
@@ -78,13 +78,13 @@ For a `.bbmodel` with an embedded texture, omit `--texture`:
 npm.cmd run capture -- --model "C:\path\model.bbmodel" --out "captures\iteration-01"
 ```
 
-Try the included redistribution-safe sample:
+Try the included original Copper Beetle sample:
 
 ```powershell
-npm.cmd run capture -- --model "test\fixtures\sample.geo.json" --out "captures\sample"
+npm.cmd run capture -- --model "examples\copper-beetle\copper-beetle.geo.json" --texture "examples\copper-beetle\copper-beetle.png" --out "captures\copper-beetle"
 ```
 
-The screenshot above is the resulting `contact-sheet.png`. Generated capture folders are ignored by Git so local project evidence is not accidentally published.
+The screenshot above is the resulting `contact-sheet.png`. The sample has a split shell, head, eyes, antennae, mandibles, and six legs so each fixed view demonstrates recognizable entity structure. Its geometry and deterministically generated atlas are project-owned and MIT-licensed. Generated capture folders are ignored by Git so local project evidence is not accidentally published.
 
 Capture selected views only:
 
@@ -131,7 +131,7 @@ Small fixes that preserve the focused visual-review workflow are welcome. See [C
 
 ## License and project names
 
-No open-source license has been granted yet. The source is publicly viewable, but reuse and redistribution permissions remain reserved unless a license is added later.
+Minecraft Entity Viewer is available under the [MIT License](LICENSE). Third-party npm dependencies remain under their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Minecraft is a trademark of Microsoft. Blockbench is a separate project. Minecraft Entity Viewer is an independent community tool and is not affiliated with or endorsed by Microsoft, Mojang Studios, or Blockbench.
 
@@ -139,6 +139,8 @@ Minecraft is a trademark of Microsoft. Blockbench is a separate project. Minecra
 
 - `AGENTS.md` — exact operating guidance and evidence boundaries
 - `README.md` — user and tool instructions
+- `examples/copper-beetle/` — original demo geometry and texture
 - `scripts/capture.mjs` — deterministic capture entry point
+- `scripts/generate-demo-texture.mjs` — reproducible demo-atlas generator
 - `src/model-builder.js` — Blockbench/Bedrock parsing, transforms, cuboids, and UVs
 - `src/app.js` — rendering, cameras, comparison modes, and exports

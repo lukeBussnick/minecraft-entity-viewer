@@ -1,7 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import * as THREE from 'three';
 import { buildModel, createPartColorLegend, parseModelDocument } from '../src/model-builder.js';
+
+test('builds the public Copper Beetle example with stable distinct parts', async () => {
+  const document = JSON.parse(await readFile(new URL('../examples/copper-beetle/copper-beetle.geo.json', import.meta.url), 'utf8'));
+  const built = buildModel(parseModelDocument(document, 'copper-beetle.geo.json'), 0, null);
+  const partIds = [];
+  built.object.traverse(child => { if (child.isMesh) partIds.push(child.userData.partId); });
+  assert.equal(built.metadata.name, 'geometry.copper_beetle_demo');
+  assert.equal(built.metadata.cubes, 17);
+  assert.equal(built.metadata.bones, 14);
+  assert.equal(new Set(partIds).size, 17);
+});
 
 test('parses and builds Bedrock geometry with bones and cubes', () => {
   const document = {
