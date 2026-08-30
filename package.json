@@ -1,0 +1,27 @@
+{
+  "name": "minecraft-entity-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "description": "Offline-first Blockbench and Minecraft Bedrock entity renderer for repeatable visual comparison.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lukeBussnick/minecraft-entity-viewer.git"
+  },
+  "homepage": "https://github.com/lukeBussnick/minecraft-entity-viewer#readme",
+  "bugs": "https://github.com/lukeBussnick/minecraft-entity-viewer/issues",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "test": "node test/run-tests.mjs",
+    "capture": "node scripts/capture.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.54.2",
+    "three": "^0.179.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

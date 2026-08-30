@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minecraft Entity Viewer</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="importmap">
+    {"imports":{"three":"/vendor/three.module.js","three/addons/":"/vendor/"}}
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Minecraft Entity Viewer</h1>
+      <p>Repeatable Blockbench and Bedrock geometry review</p>
+    </div>
+    <div class="top-actions">
+      <label class="button primary" for="file-input">Open model files</label>
+      <input id="file-input" type="file" multiple accept=".bbmodel,.json,.geo.json,.png,image/png">
+      <button id="open-folder" class="button">Open project folder</button>
+      <input id="folder-input" type="file" webkitdirectory multiple>
+    </div>
+  </header>
+
+  <main>
+    <aside class="panel controls-panel">
+      <section>
+        <h2>Model</h2>
+        <div id="drop-zone" class="drop-zone">
+          Drop a <code>.bbmodel</code>, <code>.geo.json</code>, and PNG texture here
+        </div>
+        <label>Geometry
+          <select id="geometry-select" disabled><option>No model loaded</option></select>
+        </label>
+        <label>Texture
+          <select id="texture-select" disabled><option>Automatic</option></select>
+        </label>
+        <dl id="model-info" class="model-info"></dl>
+        <div id="warnings" class="warnings" hidden></div>
+      </section>
+
+      <section>
+        <h2>View</h2>
+        <div id="view-buttons" class="view-grid">
+          <button data-view="front">Front</button><button data-view="back">Back</button>
+          <button data-view="left">Left</button><button data-view="right">Right</button>
+          <button data-view="top">Top</button><button data-view="bottom">Bottom</button>
+          <button data-view="perspective" class="wide active">Perspective</button>
+        </div>
+        <label class="check"><input id="grid-toggle" type="checkbox" checked> Ground grid</label>
+        <label class="check"><input id="wire-toggle" type="checkbox"> Wireframe overlay</label>
+        <label class="check"><input id="axes-toggle" type="checkbox"> Axis marker</label>
+        <button id="frame-model" class="button full">Frame model</button>
+      </section>
+
+      <section>
+        <h2>Reference comparison</h2>
+        <label class="button full" for="reference-input">Open reference image</label>
+        <input id="reference-input" type="file" accept="image/*">
+        <div class="segmented" id="compare-mode">
+          <button data-mode="off" class="active">Off</button>
+          <button data-mode="overlay">Overlay</button>
+          <button data-mode="side">Side by side</button>
+        </div>
+        <label>Reference opacity <span id="opacity-value">50%</span>
+          <input id="reference-opacity" type="range" min="0" max="100" value="50">
+        </label>
+      </section>
+
+      <section>
+        <h2>Export</h2>
+        <button id="export-current" class="button full">Save current view PNG</button>
+        <button id="export-sheet" class="button full">Save 7-view contact sheet</button>
+      </section>
+    </aside>
+
+    <section class="workspace" id="workspace">
+      <div class="reference-pane" id="reference-pane"><img id="reference-image" alt="Reference"></div>
+      <div class="viewport-wrap" id="viewport-wrap">
+        <canvas id="viewport"></canvas>
+        <img id="reference-overlay" alt="Reference overlay">
+        <div id="view-label" class="view-label">Perspective</div>
+        <div id="empty-state" class="empty-state">
+          <strong>Open a Blockbench model or Bedrock geometry file</strong>
+          <span>You can add a PNG texture at the same time or open an entire resource-pack folder.</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="status" role="status">Ready</footer>
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
