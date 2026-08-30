@@ -38,6 +38,7 @@ const state = {
   files: [], modelFile: null, parsed: null, textureFiles: [], texture: null,
   model: null, metadata: null, view: 'perspective', box: null, sphere: null,
   perspectiveDirection: new THREE.Vector3(-1.7, 2.4, -1.7), perspectiveFov: 32,
+  warnings: [],
 };
 
 function status(message, error = false) {
@@ -166,7 +167,21 @@ function updateInfo() {
   const warnings = [];
   if (!state.texture) warnings.push('No texture is active; the model is shown with a diagnostic material.');
   if (state.parsed.type === 'bbmodel' && (state.parsed.document.textures || []).length > 1) warnings.push('This project declares multiple textures. The viewer currently applies the selected atlas to all cubes.');
+  state.warnings = warnings;
   els.warnings.hidden = !warnings.length; els.warnings.textContent = warnings.join(' ');
+}
+
+function selectGeometry(selector) {
+  if (!state.parsed) throw new Error('No model is loaded.');
+  const text = String(selector);
+  const numeric = /^\d+$/.test(text) ? Number(text) : null;
+  const index = numeric === null ? state.parsed.names.indexOf(text) : numeric;
+  if (!Number.isInteger(index) || index < 0 || index >= state.parsed.names.length) {
+    throw new Error(`Unknown geometry ${text}. Available geometries: ${state.parsed.names.map((name, item) => `${item}:${name}`).join(', ')}`);
+  }
+  els.geometry.value = String(index);
+  rebuild();
+  return { index, name: state.parsed.names[index] };
 }
 
 const DIRECTIONS = {
@@ -328,9 +343,10 @@ function captureSurfaceBoundaries(view = state.view) {
   }
 }
 
-async function contactSheetDataUrl() {
-  const views = ['perspective','front','back','left','right','top','bottom'];
-  const cellW = 600, cellH = 600, header = 44, columns = 4, rows = 2;
+async function contactSheetDataUrl(requestedViews = ['perspective','front','back','left','right','top','bottom']) {
+  const views = [...requestedViews];
+  if (!views.length || views.some(view => !['perspective','front','back','left','right','top','bottom'].includes(view))) throw new Error('Contact-sheet views are invalid.');
+  const cellW = 600, cellH = 600, header = 44, columns = Math.min(4, views.length + 1), rows = Math.ceil((views.length + 1) / columns);
   const sheet = document.createElement('canvas'); sheet.width = columns * cellW; sheet.height = rows * (cellH + header);
   const context = sheet.getContext('2d'); context.fillStyle = '#11161b'; context.fillRect(0,0,sheet.width,sheet.height);
   const previous = state.view;
@@ -344,8 +360,9 @@ async function contactSheetDataUrl() {
     context.fillStyle = '#202831'; context.fillRect(x, y + cellH, cellW, header);
     context.fillStyle = '#eef2f5'; context.font = '22px ui-monospace, monospace'; context.fillText(view.toUpperCase(), x + 16, y + cellH + 29);
   }
-  context.fillStyle = '#202831'; context.fillRect(3 * cellW, cellH + header, cellW, cellH + header);
-  context.fillStyle = '#9ba8b5'; context.font = '18px ui-monospace, monospace'; context.fillText(state.metadata?.name || 'Minecraft entity', 3 * cellW + 20, cellH + header + 40);
+  const metadataX = (views.length % columns) * cellW, metadataY = Math.floor(views.length / columns) * (cellH + header);
+  context.fillStyle = '#202831'; context.fillRect(metadataX, metadataY, cellW, cellH + header);
+  context.fillStyle = '#9ba8b5'; context.font = '18px ui-monospace, monospace'; context.fillText(state.metadata?.name || 'Minecraft entity', metadataX + 20, metadataY + 40);
   setView(previous, false); return sheet.toDataURL('image/png');
 }
 
@@ -388,7 +405,10 @@ window.__entityViewer = {
   captureSurfaceBoundaries,
   partLegend,
   contactSheetDataUrl,
+  selectGeometry,
   get metadata() { return state.metadata; },
+  get warnings() { return [...state.warnings]; },
+  get geometryNames() { return [...(state.parsed?.names || [])]; },
   get view() { return state.view; },
 };
 resize();

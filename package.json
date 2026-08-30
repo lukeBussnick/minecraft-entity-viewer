@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Offline-first Blockbench and Minecraft Bedrock entity renderer for repeatable visual comparison.",
+  "description": "Agent-first Blockbench and Minecraft Bedrock renderer for deterministic visual evidence and iteration comparison.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lukeBussnick/minecraft-entity-viewer.git"
@@ -16,6 +16,7 @@
     "dev": "node server.mjs",
     "test": "node test/run-tests.mjs",
     "capture": "node scripts/capture.mjs",
+    "compare": "node scripts/compare-captures.mjs",
     "demo:texture": "node scripts/generate-demo-texture.mjs"
   },
   "dependencies": {

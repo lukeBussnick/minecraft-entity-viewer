@@ -1,31 +1,35 @@
 # Minecraft Entity Viewer
 
-A local review tool for rendering Blockbench/Minecraft Bedrock entity models before loading them into Minecraft. It is designed for a repeatable **edit in Blockbench → render fixed views → compare to the reference → revise** loop.
+Minecraft Entity Viewer is a local evidence renderer for AI coding agents that work on Blockbench and Minecraft Bedrock entity models.
+
+It was built to solve a specific iteration problem: an agent such as Codex could edit model JSON and texture pixels, but source inspection alone could not show whether the resulting silhouette, proportions, cube placement, or UV work had actually improved. The viewer closes that gap with a repeatable loop:
+
+**agent edits model or texture → viewer captures fixed evidence → agent inspects and compares → agent makes a bounded revision → repeat**
 
 ![Seven-view contact sheet of the included Copper Beetle demo](docs/images/sample-contact-sheet.png)
 
-**Status:** usable v1.0 local tool. The parser, transforms, UV behavior, server boundary, and command-line capture path are tested. Minecraft runtime behavior remains deliberately out of scope.
+Blockbench remains the authoring environment. Minecraft remains the final runtime validator. This project supplies the fast intermediate visual evidence between them.
 
-The viewer is intentionally practical rather than flashy. It supports:
-
-- Blockbench `.bbmodel` project files
-- Minecraft Bedrock `.geo.json` geometry files using `minecraft:geometry`
-- PNG texture atlases, including textures embedded in a `.bbmodel`
-- fixed front, back, left, right, top, bottom, and perspective views
-- orthographic cameras for all six directional views
-- automatic model framing, nearest-neighbor texture rendering, grids, axes, and wireframe mode
-- exact unlit atlas colors for Blockbench-like texture inspection
-- depth-correct cutout transparency for Minecraft entity atlases
-- an optional reference image shown side by side or as an opacity-controlled overlay
-- current-view PNG and seven-view contact-sheet export
-- a command-line capture workflow for Codex and automation
-- optional exact masks, lit clay, and deterministic per-cube part-ID sidecars for diagnostic captures
+**Status:** usable v1.0 local tool. The parser, transforms, UV behavior, server boundary, command-line capture path, structured evidence, and capture comparison path are tested.
 
 ## Who it is for
 
-This viewer is for Bedrock creators who want consistent screenshots between Blockbench revisions, especially when comparing silhouette, proportions, pivots, cube placement, UVs, or texture work. It is not a replacement for Blockbench or Minecraft.
+AI coding agents such as Codex are the primary intended users. The deterministic command-line capture path is the core interface: it produces predictable image and JSON artifacts that an agent can inspect, retain, and compare without operating the GUI.
 
-## First-time setup
+Humans can also use the browser viewer for interactive inspection and manual reference overlays. That interface is useful, but secondary to the agent capture loop. The viewer is not a replacement for Blockbench or Minecraft.
+
+## What it renders
+
+- Blockbench `.bbmodel` project files
+- Minecraft Bedrock `.geo.json` files using `minecraft:geometry`
+- PNG texture atlases, including a texture embedded in a `.bbmodel`
+- fixed front, back, left, right, top, bottom, and perspective views
+- orthographic cameras and automatic framing for the six directional views
+- nearest-neighbor, unlit texture rendering and cutout transparency
+- optional masks, lit clay renders, deterministic part-ID renders, and surface-boundary records
+- a contact sheet, source hashes, warnings, camera settings, and an artifact index
+
+## Setup
 
 Requirements: Node.js 20+ and Microsoft Edge.
 
@@ -33,68 +37,97 @@ Requirements: Node.js 20+ and Microsoft Edge.
 npm.cmd ci
 ```
 
-Dependencies are local to this folder. The viewer itself does not upload models, textures, or reference images anywhere.
+Dependencies are local to this folder. Normal viewing and capture do not upload models, textures, references, or results.
 
-## Open the viewer
+## Agent capture interface
 
-Double-click `launch-viewer.bat`, or run:
-
-```powershell
-npm.cmd start
-```
-
-Then open [http://127.0.0.1:4173](http://127.0.0.1:4173).
-
-Use **Open model files** to select a model and texture together. For a resource-pack project, **Open project folder** is usually easiest: the viewer searches the chosen folder for supported geometry and PNG files, then chooses the most likely texture. You can override both geometry and texture with the dropdowns.
-
-## Recommended visual-comparison workflow
-
-1. Save/export the current Blockbench project as `.bbmodel`, or save the Bedrock model as `.geo.json` with its PNG texture.
-2. Open the model and texture in the viewer.
-3. Open the reference image and choose **Side by side** for shape/proportion review.
-4. Check Front, Left/Right, and Perspective first. Use Top/Bottom when silhouettes or attachment points matter.
-5. Use **Overlay** and adjust opacity when the reference angle is close to one of the fixed views.
-6. Turn on wireframe when checking cube boundaries, pivots, gaps, or unintended intersections.
-7. Save the seven-view contact sheet for a durable iteration record.
-8. Return to Blockbench, make one bounded change, and capture the same views again.
-
-Fixed directional views reframe the model consistently and use orthographic projection. This removes perspective distortion from proportion checks. Perspective remains freely orbitable with the mouse.
-
-## Codex command-line capture
-
-The CLI uses installed Microsoft Edge in headless mode. It outputs seven individual PNGs, a contact sheet, and `render-info.json`:
-
-Automated captures use a square, UI-free render canvas so camera framing and contact-sheet proportions remain stable across iterations.
+Use a new output directory for every iteration. `--agent` enables the full evidence preset: beauty renders, masks, clay renders, part IDs, and surface boundaries. `--json` makes stdout a single machine-readable result.
 
 ```powershell
-npm.cmd run capture -- --model "C:\path\model.geo.json" --texture "C:\path\texture.png" --out "captures\iteration-01"
+node scripts\capture.mjs `
+  --model "C:\path\model.geo.json" `
+  --texture "C:\path\texture.png" `
+  --out "C:\project\diagnostics\iteration-01-baseline" `
+  --agent `
+  --json
 ```
 
-Add `--masks --clay --parts` when geometry evidence must include exact silhouettes, lighting-readable form, and stable cube ownership. Part capture writes `<view>.parts.png` plus `part-legend.json`; Forge-exported diagnostic geometry preserves stable cube IDs. Add `--surface-boundaries` for compact, frontmost contour evidence containing cube/face ownership, linear camera depth, world position, world normal, fixed camera matrices, and source hashes. This evidence is intended for read-only diagnostic attribution; it does not authorize model mutation.
-
-For a `.bbmodel` with an embedded texture, omit `--texture`:
+For a `.bbmodel` with an embedded texture, omit `--texture`. If a file contains more than one geometry, select one explicitly by index or exact identifier:
 
 ```powershell
-npm.cmd run capture -- --model "C:\path\model.bbmodel" --out "captures\iteration-01"
+node scripts\capture.mjs --model "C:\path\model.bbmodel" --geometry "geometry.example" --out "C:\path\iteration-02" --agent --json
 ```
 
-Try the included original Copper Beetle sample:
+The capture command refuses to write into a non-empty output directory. This prevents an agent from silently mixing or overwriting iteration evidence. A successful JSON response identifies the output directory, manifest, source hashes, and warnings. Failures use a stable code, stage, and message; after output preparation, partial failures also write `capture-error.json`.
+
+### Capture evidence
+
+`capture-manifest.json` is the authoritative run record. It contains:
+
+- model and texture names and SHA-256 hashes
+- selected geometry, format, bone count, cube count, and texture dimensions
+- requested views, evidence channels, and camera parameters
+- structured warnings and runtime versions
+- a sorted artifact index with byte counts and SHA-256 hashes
+- an explicit list of claims supported by the viewer and claims that still require Minecraft
+
+The image and diagnostic artifacts serve different reasoning tasks:
+
+| Artifact | Agent use |
+|---|---|
+| `<view>.png` | texture placement, apparent form, and visible visual defects |
+| `<view>.mask.png` | exact silhouette and occupancy comparison |
+| `<view>.clay.png` | form and intersections without texture distraction |
+| `<view>.parts.png` + `part-legend.json` | deterministic visible cube ownership |
+| `<view>.surface-boundaries.json` | frontmost contour ownership, face, depth, world position, normal, and fixed camera data |
+| `contact-sheet.png` | compact multi-view review |
+| `render-info.json` | concise human-readable run metadata |
+
+These outputs are evidence, not an automatic quality judgment. An agent must still relate a visible discrepancy to the intended design or reference.
+
+### Compare two iterations
+
+Capture comparison requires two completed capture directories with manifests. It computes exact beauty-pixel change and same-camera mask changes, then writes `comparison.json` and added/removed silhouette diff images.
 
 ```powershell
-npm.cmd run capture -- --model "examples\copper-beetle\copper-beetle.geo.json" --texture "examples\copper-beetle\copper-beetle.png" --out "captures\copper-beetle"
+node scripts\compare-captures.mjs `
+  --baseline "C:\project\diagnostics\iteration-01-baseline" `
+  --candidate "C:\project\diagnostics\iteration-02-head-width" `
+  --out "C:\project\diagnostics\compare-01-to-02" `
+  --json
 ```
 
-The screenshot above is the resulting `contact-sheet.png`. The sample has a split shell, head, eyes, antennae, mandibles, and six legs so each fixed view demonstrates recognizable entity structure. Its geometry and deterministically generated atlas are project-owned and MIT-licensed. Generated capture folders are ignored by Git so local project evidence is not accidentally published.
+Mask diff images use cyan for added silhouette, magenta for removed silhouette, and gray for unchanged silhouette. The report can tell an agent what pixels changed and by how much; it deliberately does not claim that the candidate is better.
 
-Capture selected views only:
+### Capture selected views
+
+Use a stable subset when only certain directions are relevant:
 
 ```powershell
-npm.cmd run capture -- --model "C:\path\model.bbmodel" --views "perspective,front,left,right" --out "captures\shape-check"
+node scripts\capture.mjs --model "C:\path\model.bbmodel" --views "perspective,front,left,right" --out "C:\path\shape-check-01" --agent --json
 ```
+
+The contact sheet contains only the requested views. Keep the same view set and camera parameters when comparing iterations.
+
+### Included example
+
+The original Copper Beetle sample is a modest Bedrock-style mob with a split shell, head, eyes, antennae, mandibles, and six legs:
+
+```powershell
+node scripts\capture.mjs --model "examples\copper-beetle\copper-beetle.geo.json" --texture "examples\copper-beetle\copper-beetle.png" --out "captures\copper-beetle-agent-demo" --agent --json
+```
+
+Its geometry and deterministically generated atlas are project-owned and MIT-licensed. Generated capture folders are ignored by Git so local model evidence is not accidentally published.
+
+## Human viewer (secondary interface)
+
+Double-click `launch-viewer.bat`, or run `npm.cmd start`, then open [http://127.0.0.1:4173](http://127.0.0.1:4173).
+
+The browser interface can open model, texture, and reference files; switch geometries and views; toggle grids, axes, and wireframe; orbit the perspective camera; and export the current view or a contact sheet. Its side-by-side and opacity-overlay reference modes are manual visual aids. Reference-image alignment and semantic correspondence are not currently automated by the capture CLI.
 
 ## View directions and coordinate assumptions
 
-Bedrock geometry is converted with the same X-axis and rotation-sign adjustments Blockbench applies when importing it into its Three.js workspace. The displayed workspace uses X for left/right, Y for vertical, and Z for front/back. The fixed labels mean:
+Bedrock geometry is converted with the same X-axis and rotation-sign adjustments Blockbench applies when importing it into its Three.js workspace. The displayed workspace uses X for left/right, Y for vertical, and Z for front/back.
 
 | View | Camera position | Looking toward |
 |---|---|---|
@@ -105,29 +138,35 @@ Bedrock geometry is converted with the same X-axis and rotation-sign adjustments
 | Top | positive Y | negative Y |
 | Bottom | negative Y | positive Y |
 
-If a particular project's authored “front” is reversed, use Back as its front comparison. The important part is to keep the same labeled view across iterations.
+If a model's authored “front” is reversed, document that Back is its practical front and keep using the same labeled view across iterations.
 
 ## Accuracy boundaries
 
-This tool is a geometry/texture inspection renderer, not a complete Minecraft runtime emulator. It intentionally does not evaluate Bedrock animation controllers, render controllers, Molang expressions, entity scale components, attachables, materials, emissive effects, or in-game lighting. Use it to catch geometry, UV, texture, pivot, rotation, proportion, and silhouette problems early; Minecraft remains the final runtime validation.
+The viewer supports static cube geometry, bone/group transforms, cube pivots and rotations, texture UVs, inflate, transparent PNG pixels, silhouette, and visible part ownership.
 
-Current multi-texture limitation: if a `.bbmodel` declares several atlases, the selected texture is applied to all cubes. The viewer flags this condition. Typical single-atlas Bedrock entities are the primary target.
+It does not reproduce the complete Bedrock render pipeline. It cannot validate animations, render controllers, Molang expressions, entity scaling components, attachables, materials, emissive effects, in-game lighting, or gameplay behavior. Those claims require a fresh Minecraft runtime test.
 
-## Privacy and network behavior
+If a `.bbmodel` declares several atlases, the selected texture is applied to every cube and the condition is reported as a warning. Typical single-atlas Bedrock entities are the primary target.
 
-The viewer binds only to `127.0.0.1`. Model, texture, and reference files are opened locally in the browser and are not uploaded by this project. Runtime dependencies are installed from npm during setup; after installation, normal viewing and capture do not require a remote service.
+## Current design boundaries
+
+- Reference comparison remains a human-guided GUI operation; the CLI has no general way to infer camera correspondence or intended semantic landmarks from an arbitrary image.
+- Capture comparison measures exact visual change, not whether a design is closer to a target.
+- The tool does not edit models, invoke an LLM, or emulate Minecraft.
+- Each capture starts a short-lived headless browser. A persistent capture worker may reduce startup time in very large iteration campaigns, but is not currently warranted by the focused workflow.
 
 ## Verification
 
 ```powershell
 npm.cmd test
+node scripts\capture.mjs --model "examples\copper-beetle\copper-beetle.geo.json" --texture "examples\copper-beetle\copper-beetle.png" --out "captures\verification" --agent --json
 ```
 
-For end-to-end verification, run a CLI capture against a known model and inspect `contact-sheet.png`.
+For changes that affect capture evidence, repeat the same capture into another new directory and compare the artifact hashes or run `scripts\compare-captures.mjs`.
 
 ## Contributing
 
-Small fixes that preserve the focused visual-review workflow are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the validation and evidence expectations.
+Small changes that strengthen the focused agent feedback loop are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for validation and evidence expectations.
 
 ## License and project names
 
@@ -137,10 +176,10 @@ Minecraft is a trademark of Microsoft. Blockbench is a separate project. Minecra
 
 ## Repository map
 
-- `AGENTS.md` — exact operating guidance and evidence boundaries
-- `README.md` — user and tool instructions
+- `AGENTS.md` — agent operating procedure and evidence boundaries
 - `examples/copper-beetle/` — original demo geometry and texture
-- `scripts/capture.mjs` — deterministic capture entry point
-- `scripts/generate-demo-texture.mjs` — reproducible demo-atlas generator
+- `scripts/capture.mjs` — deterministic agent capture entry point
+- `scripts/compare-captures.mjs` — iteration evidence comparison
 - `src/model-builder.js` — Blockbench/Bedrock parsing, transforms, cuboids, and UVs
-- `src/app.js` — rendering, cameras, comparison modes, and exports
+- `src/app.js` — renderer, cameras, diagnostics, and human viewer behavior
+- `test/` — parser, renderer-contract, CLI, and evidence-metric tests
